@@ -1,0 +1,70 @@
+{
+  "corpus_name": "carnivore_rag",
+  "version": "1.0",
+  "files": [
+    {
+      "path": "rag/recipes/carnivore_code_cookbook_bookey.pdf",
+      "type": "recipes",
+      "topic": ["cooking", "recipes"],
+      "strictness": "mixed",
+      "source": "Bookey CDN",
+      "requires_filtering": true,
+      "notes": "May contain non-strict ingredients; apply carnivore rules filtering at ingestion time."
+    },
+    {
+      "path": "rag/carnivore_basics.md",
+      "type": "knowledge",
+      "topic": ["basics", "introduction"],
+      "strictness": "strict",
+      "source": "internal",
+      "requires_filtering": false
+    },
+    {
+      "path": "rag/carnivore_recipes.md",
+      "type": "recipes",
+      "topic": ["cooking", "recipes"],
+      "strictness": "strict",
+      "source": "internal",
+      "requires_filtering": false
+    },
+    {
+      "path": "rag/electrolyte_balance.md",
+      "type": "health",
+      "topic": ["electrolytes", "supplements"],
+      "strictness": "neutral",
+      "source": "internal",
+      "requires_filtering": false
+    },
+    {
+      "path": "rag/fasting_protocols.md",
+      "type": "protocols",
+      "topic": ["fasting", "OMAD", "IF"],
+      "strictness": "neutral",
+      "source": "internal",
+      "requires_filtering": false
+    },
+    {
+      "path": "rag/keto_adaptation.md",
+      "type": "health",
+      "topic": ["adaptation", "keto-flu", "transition"],
+      "strictness": "neutral",
+      "source": "internal",
+      "requires_filtering": false
+    },
+    {
+      "path": "rag/symptom_management.md",
+      "type": "health",
+      "topic": ["symptoms", "troubleshooting"],
+      "strictness": "neutral",
+      "source": "internal",
+      "requires_filtering": false
+    }
+  ],
+  "manual_sources": [
+    {
+      "path": "rag/manual/",
+      "file": "MANUAL_SOURCES.md",
+      "notes": "Contains sources that require login/paywall; download manually if you have access."
+    }
+  ]
+}

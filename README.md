@@ -1,80 +1,150 @@
-# Super Bot Nutri IA
+# Carnivore Diet Tracker Bot
 
-Este é um bot do Telegram projetado para atuar como um assistente de nutrição pessoal. Ele utiliza uma combinação de modelos de IA locais e baseados em nuvem para fornecer análises nutricionais a partir de mensagens de voz e imagens.
+Telegram bot para rastreamento de dieta carnívora com validação determinística. Usa IA para parsing, mas **nunca como fonte de verdade** - todas as decisões são validadas por regras estritas do `carnivore_core.py`.
 
-## Descrição
+## Arquitetura
 
-O Super Bot Nutri IA permite que os usuários monitorem sua dieta e obtenham informações sobre os alimentos que consomem. Os usuários podem enviar notas de voz descrevendo suas refeições, e o bot irá transcrevê-las e analisá-las. Eles também podem enviar fotos de seus alimentos para uma análise visual. O bot mantém um registro diário da dieta e das notas de voz de cada usuário.
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   User Input    │────▶│   LLM (Parser)   │────▶│ carnivore_core  │
+│ voice/photo/txt │     │ Ollama/Gemini    │     │ (SOURCE OF TRUTH)│
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                                                          │
+                                                          ▼
+                                                 ┌─────────────────┐
+                                                 │    database     │
+                                                 │    (SQLite)     │
+                                                 └─────────────────┘
+```
 
-A principal característica deste bot é sua capacidade de realizar a maior parte do processamento localmente, garantindo a privacidade do usuário. A transcrição de áudio e a análise de texto são feitas com modelos executados localmente, enquanto a análise de imagem é realizada através da API Gemini do Google.
+**Princípio:** LLM extrai/sugere → `carnivore_core` valida → só então salva.
 
 ## Funcionalidades
 
-- **Transcrição de Áudio:** Transcreve notas de voz em português usando o modelo Faster-Whisper localmente.
-- **Análise de Refeição por Texto:** Analisa o texto transcrito para identificar menções a alimentos e estimar calorias usando um modelo Ollama local.
-- **Análise Nutricional Avançada:** Fornece uma análise detalhada da refeição, incluindo macronutrientes, impacto metabólico e dicas de saúde, usando um modelo Ollama local para raciocínio.
-- **Análise de Imagem de Alimentos:** Analisa fotos de alimentos para identificar os itens, estimar macros e fornecer dicas usando o Gemini 1.5 Flash.
-- **Diário de Dieta:** Salva automaticamente as refeições analisadas no diário do usuário.
-- **Notas de Voz:** Mantém um histórico das notas de voz enviadas pelo usuário.
-- **Comandos do Bot:**
-    - `/start`: Inicia a interação com o bot.
-    - `/diet`: Exibe um resumo das refeições do dia.
-    - `/notes`: Mostra as notas de voz do dia.
-- **Teclado de Menu:** Interface fácil de usar com botões para as principais ações.
+### Comandos (19 total)
 
-## Como Usar
+| Comando | Descrição |
+|---------|-----------|
+| `/start` | Inicializa o bot |
+| `/setgoals <kcal> <prot> <fat>` | Define metas diárias de macros |
+| `/setlevel strict\|relaxed` | Define nível de rigor carnívoro |
+| `/stats` | Progresso diário com barras visuais |
+| `/metabolic` | Score de adaptação cetogênica, risco de eletrólitos, tendências |
+| `/diet` | Diário de refeições do dia |
+| `/fast` | Inicia/encerra jejum |
+| `/faststatus` | Duração atual do jejum com níveis |
+| `/symptom <tipo> <1-5>` | Registra sintoma com severidade |
+| `/symptoms` | Lista sintomas do dia |
+| `/weight <kg>` | Registra peso com tendência |
+| `/report [daily\|weekly\|html]` | Relatórios no Telegram |
+| `/export <csv\|json\|html> [daily\|weekly]` | Exporta dados |
+| `/recipe [preferência]` | Gera receita carnívora |
+| `/suggest` | Sugestão baseada em macros restantes |
+| `/plan_tomorrow` | Plano de refeições para amanhã |
+| `/plan_week` | Plano semanal |
+| `/notes` | Visualiza notas de voz |
 
-1.  **Inicie o Bot:** Encontre o bot no Telegram e pressione "Iniciar".
-2.  **Enviar Áudio:** Pressione "🎙️ Enviar Áudio" e grave uma nota de voz descrevendo sua refeição. O bot irá transcrever o áudio e fornecer uma análise nutricional.
-3.  **Analisar Comida por Foto:** Pressione "📸 Analisar Comida" e envie uma foto da sua refeição. O bot irá analisar a imagem e retornar informações nutricionais.
-4.  **Consultar Dieta:** Pressione "🥗 Minha Dieta" para ver um resumo de suas refeições registradas no dia.
-5.  **Ver Notas:** Pressione "📝 Minhas Notas" para ver as transcrições de suas notas de voz do dia.
+### Input
+
+- **Voz:** Transcrição local com Faster-Whisper
+- **Foto:** Análise de imagem com Gemini API
+- **Texto:** Parsing com Ollama/Mistral local
+
+### Níveis Carnívoros
+
+| Nível | Permitido |
+|-------|-----------|
+| **STRICT** | Apenas carne, peixe, ovos, gordura animal |
+| **RELAXED** | + laticínios, café, temperos básicos |
+| **DIRTY** | + adoçantes, bacon processado (com aviso) |
+
+### Rastreamento
+
+- Refeições com macros (kcal, proteína, gordura)
+- Jejum intermitente (duração, quebras)
+- Sintomas (tontura, fraqueza, cãibras, energia, etc.)
+- Peso com tendências
+- Score de adaptação cetogênica (0-100)
+
+## Estrutura de Arquivos
+
+```
+meu_bot/
+├── bot.py              # Bot principal (19 comandos)
+├── carnivore_core.py   # Regras determinísticas (SOURCE OF TRUTH)
+├── database.py         # SQLite - users, meals, fasting, symptoms, weight
+├── models.py           # Dataclasses: MealEvent, FastingEvent, etc.
+├── prompts.py          # Prompts LLM especializados
+├── report_generator.py # HTML/CSV/JSON export com gráficos
+├── rag_manifest.json   # Índice de fontes RAG
+├── download_carnivore_rag.sh # Script para baixar PDFs
+└── rag/                # Base de conhecimento
+    ├── recipes/        # Livro de receitas (PDF)
+    ├── science/        # Papers científicos
+    ├── manual/         # Fontes que requerem download manual
+    ├── carnivore_basics.md
+    ├── carnivore_recipes.md
+    ├── electrolyte_balance.md
+    ├── fasting_protocols.md
+    ├── keto_adaptation.md
+    └── symptom_management.md
+```
 
 ## Instalação
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone <url-do-repositorio>
-    cd <nome-do-repositorio>
-    ```
+```bash
+git clone https://github.com/igorpeclat/carnivore-diet-tracker.git
+cd carnivore-diet-tracker
 
-2.  **Crie e ative um ambiente virtual:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+python3 -m venv venv
+source venv/bin/activate
 
-3.  **Instale as dependências:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *(Nota: Um arquivo `requirements.txt` precisa ser criado com as dependências listadas abaixo.)*
+pip install -r requirements.txt
+```
 
-4.  **Configure as chaves de API:**
-    Edite o arquivo `bot.py` e insira suas chaves nos seguintes campos:
-    - `TELEGRAM_TOKEN`
-    - `GEMINI_API_KEY`
+### Variáveis de Ambiente
 
-5.  **Execute o bot:**
-    ```bash
-    python3 bot.py
-    ```
+Crie `.env`:
+```
+TELEGRAM_TOKEN=seu_token_do_botfather
+GEMINI_API_KEY=sua_chave_gemini
+```
 
-## Configuração
+### Modelos Locais
 
--   **`TELEGRAM_TOKEN`**: O token para seu bot do Telegram, obtido com o @BotFather.
--   **`GEMINI_API_KEY`**: Sua chave de API para o Google Gemini.
--   **`OLLAMA_MODEL`**: O nome do modelo Ollama a ser usado para análise de texto (ex: "mistral"). Certifique-se de que o Ollama esteja em execução e o modelo especificado esteja disponível.
--   **`whisper_model`**: O modelo Faster-Whisper a ser usado para transcrição (ex: "small").
+```bash
+ollama pull mistral
+```
+
+### Executar
+
+```bash
+python3 bot.py
+```
 
 ## Dependências
 
--   `python-telegram-bot`
--   `google-generativeai`
--   `Pillow`
--   `faster-whisper`
--   `ollama`
--   `numpy`
--   `torch` (se estiver usando GPU para Whisper)
+```
+python-telegram-bot
+google-generativeai
+Pillow
+faster-whisper
+ollama
+python-dotenv
+```
 
-Crie um arquivo `requirements.txt` com o conteúdo acima para facilitar a instalação.
+## RAG (Base de Conhecimento)
+
+Para baixar PDFs de referência:
+```bash
+./download_carnivore_rag.sh
+```
+
+**Importante:** RAG fornece contexto, não autoridade. Todo output passa pelo `carnivore_core.py`.
+
+## Princípios de Design
+
+1. **LLM nunca é fonte de verdade** - apenas parsing/sugestões
+2. **Validação determinística** - regras fixas em `carnivore_core.py`
+3. **Privacidade** - processamento local quando possível (Whisper, Ollama)
+4. **Rastreamento completo** - refeições, jejum, sintomas, peso, adaptação
