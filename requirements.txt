@@ -1,0 +1,7 @@
+python-telegram-bot
+google-generativeai
+Pillow
+faster-whisper
+ollama
+numpy
+python-dotenv
