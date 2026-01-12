@@ -288,10 +288,17 @@ def end_fast(user_id: int, end_time: datetime) -> bool:
     c = conn.cursor()
     try:
         c.execute(
-            '''UPDATE fasting_events SET end_time = ? 
+            '''SELECT id FROM fasting_events 
                WHERE user_id = ? AND end_time IS NULL 
                ORDER BY start_time DESC LIMIT 1''',
-            (end_time.isoformat(), user_id)
+            (user_id,)
+        )
+        row = c.fetchone()
+        if not row:
+            return False
+        c.execute(
+            "UPDATE fasting_events SET end_time = ? WHERE id = ?",
+            (end_time.isoformat(), row[0])
         )
         conn.commit()
         return c.rowcount > 0
